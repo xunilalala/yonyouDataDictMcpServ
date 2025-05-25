@@ -1,0 +1,41 @@
+spring:
+  main:
+    banner-mode: off
+  application:
+    name: yonyou-datadict
+  
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+data-dict:
+  base-url: https://media.oyonyou.com:18000/oyonyou/dict
+  static-path: /static/js/data-dict-tree.js
+  default-app-code: yonbip3ddc
+  cache-enabled: true
+  cache-size: 100
+
+logging:
+  level:
+    win.ixuni.yonyoudatadict: INFO
+    org.springframework: WARN
+  pattern:
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+    console: '%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+  file:
+    name: /app/logs/yonyou-datadict.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 10

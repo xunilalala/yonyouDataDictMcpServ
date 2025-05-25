@@ -1,0 +1,9 @@
+spring:
+  main:
+    banner-mode: off
+data-dict:
+  base-url: https://media.oyonyou.com:18000/oyonyou/dict
+  static-path: /static/js/data-dict-tree.js
+  default-app-code: yonbip3ddc
+  cache-enabled: true
+  cache-size: 100
