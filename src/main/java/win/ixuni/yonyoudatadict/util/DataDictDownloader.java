@@ -17,8 +17,10 @@ import org.springframework.web.client.RestTemplate;
 import win.ixuni.yonyoudatadict.config.DataDictConfig;
 import win.ixuni.yonyoudatadict.model.DataDictDetail;
 import win.ixuni.yonyoudatadict.model.DataDictItem;
+import win.ixuni.yonyoudatadict.processor.CustomFieldRemovalProcessor;
 import win.ixuni.yonyoudatadict.processor.DataDictProcessor;
 import win.ixuni.yonyoudatadict.processor.DefaultDataDictProcessor;
+import win.ixuni.yonyoudatadict.processor.RefClassPathHrefProcessor;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -62,6 +64,10 @@ public class DataDictDownloader {
         
         // 添加默认处理器
         this.processors.add(new DefaultDataDictProcessor());
+        // 添加RefClassPathHref处理器
+        this.processors.add(new RefClassPathHrefProcessor());
+        // 添加自定义字段移除处理器
+        this.processors.add(new CustomFieldRemovalProcessor(config));
     }
     
     /**

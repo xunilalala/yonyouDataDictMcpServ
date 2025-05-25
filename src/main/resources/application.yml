@@ -7,3 +7,5 @@ data-dict:
   default-app-code: yonbip3ddc
   cache-enabled: true
   cache-size: 100
+  custom-field-removal:
+    enabled: true

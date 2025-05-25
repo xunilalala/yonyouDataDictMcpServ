@@ -22,4 +22,13 @@ public class DataDictConfig {
     private boolean cacheEnabled;
 
     private int cacheSize = 100; // 默认缓存大小
+
+    private CustomFieldRemoval customFieldRemoval = new CustomFieldRemoval(); // 新增自定义字段移除配置
+
+    @Data
+    public static class CustomFieldRemoval {
+
+        private boolean enabled = false; // 默认禁用
+
+    }
 }

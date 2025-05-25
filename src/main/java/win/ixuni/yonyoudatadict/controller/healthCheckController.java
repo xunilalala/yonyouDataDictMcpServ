@@ -12,7 +12,7 @@ import win.ixuni.yonyoudatadict.service.DataDictService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/health")
+@RequestMapping("/check")
 public class healthCheckController {
 
     private final DataDictService dataDictService;
@@ -21,21 +21,21 @@ public class healthCheckController {
         this.dataDictService = dataDictService;
     }
 
-    @RequestMapping("/check")
+    @RequestMapping()
     public String healthCheck() {
         return "OK";
     }
 
 
     // 测试工具方法：根据类ID获取数据字典详情
-    @RequestMapping("/check/tool/detail/{classId}")
+    @RequestMapping("/tool/detail/{classId}")
     public DataDictDetail testToolGetDetail(
             @PathVariable("classId") String classId) {
         return dataDictService.downloadDataDictDetail(classId);
     }
 
     // 测试工具方法：根据名称搜索数据字典条目
-    @RequestMapping("/check/tool/search")
+    @RequestMapping("/tool/search")
     public List<DataDictItem> testToolSearch(
             @RequestParam(value = "name", required = false, defaultValue = "") String nameQuery) {
         return dataDictService.searchDataDictItemsByName(nameQuery);
