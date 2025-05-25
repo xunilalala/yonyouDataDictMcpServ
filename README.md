@@ -4,7 +4,8 @@
 
 ## 项目介绍
 
-本项目是一个基于 Spring Boot 3.x 和 Spring AI 构建的 Model Context Protocol (MCP) 服务器，用于访问和查询用友数据字典服务。项目提供了标准化的 MCP 接口，可以与支持 MCP 协议的 AI 客户端集成，实现对用友数据字典的智能查询和检索。
+本项目是一个基于 Spring Boot 3.x 和 Spring AI 构建的 Model Context Protocol (MCP) 服务器，用于访问和查询用友数据字典服务(
+目前仅支持YonBIP高级版)。项目提供了标准化的 MCP 接口，可以与支持 MCP 协议的 AI 客户端集成，实现对用友数据字典的智能查询和检索。
 
 ## 功能特性
 
@@ -201,7 +202,8 @@ A: 请检查：
 - 用友的家人们基本都会java,自己看看代码,修修就行了
 
 ### Q: 缓存如何清理？
-A: 重启应用会自动清理内存缓存.
+
+A: 重启应用会自动清理内存缓存.系统运行中如果超过了允许的最大缓存个数,会自动清理最久未使用的缓存
 
 ### Q: 如何修改数据源？
 A: 目前基于www.oyonyou.com 抓包的url,如果情况特殊,可以修改`application.yml` 中的 `data-dict.base-url` 配置。
@@ -209,7 +211,8 @@ A: 目前基于www.oyonyou.com 抓包的url,如果情况特殊,可以修改`appl
 ### Q: 现在查看的是2312的,我想让AI查看NC65的,如何操作？
 
 A: 目前https://www.oyonyou.com/dict/yonbip3ddcr5/ 访问这个打开的是2312的字典,暂称yonbip3ddcr5为应用code,那么在application中设置
-default-app-code 为 yonbip3ddcr5 即为访问2312的字典,NC65的同理,替换应用code为 ncddc0065 即可
+default-app-code 为 yonbip3ddcr5 即为访问2312的字典,NC65的同理,替换应用code为 ncddc0065 即可(
+目前仅支持高级版,nc65只是举例)
 ## 贡献
 
 欢迎提交 Issue 和 Pull Request！
