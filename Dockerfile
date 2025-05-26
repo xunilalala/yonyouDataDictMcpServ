@@ -9,6 +9,7 @@ COPY pom.xml .
 COPY mvnw .
 COPY mvnw.cmd .
 COPY .mvn .mvn
+COPY settings.xml /root/.m2/settings.xml
 
 # 复制源代码
 COPY src ./src

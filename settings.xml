@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+    <mirrors>
+        <!-- 阿里镜像 -->
+        <mirror>
+            <id>alimaven</id>
+            <mirrorOf>*</mirrorOf>
+            <name>aliyun maven</name>
+            <url>https://maven.aliyun.com/nexus/content/groups/public/</url>
+        </mirror>
+
+    </mirrors>
+    <profiles>
+    </profiles>
+</settings>
