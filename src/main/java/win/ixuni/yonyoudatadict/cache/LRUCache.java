@@ -1,7 +1,6 @@
 package win.ixuni.yonyoudatadict.cache;
 
 
-import org.springframework.stereotype.Component;
 import win.ixuni.yonyoudatadict.config.DataDictConfig;
 
 import java.util.LinkedHashMap;
@@ -13,12 +12,9 @@ import java.util.Map;
  * @param <K> 键的类型
  * @param <V> 值的类型
  */
-@Component
 public class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
     private final int capacity; // 缓存的最大容量
-
-    private final DataDictConfig config;
 
     /**
      * 构造函数
@@ -28,7 +24,6 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
         // accessOrder = true 表示链表会按照访问顺序来维护，最近访问的元素会被移到末尾
         // accessOrder = false (默认) 表示链表会按照插入顺序来维护
         super(config.getCacheSize(), 0.75f, true);
-        this.config = config;
         this.capacity = config.getCacheSize();
     }
 

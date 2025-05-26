@@ -56,11 +56,11 @@ public class DataDictService {
      * @param nameQuery 用于模糊搜索的名称查询字符串
      * @return 匹配的数据字典项列表
      */
-    @Tool(description = "根据名称模糊搜索用友数据字典条目及其类id，注意，nameQuery的值不易太长，虽然是模糊匹配，但是用的是like %nameQuery%的方式，你需要保证关键字不能太少(太少导致拆卸你的数据特别多，搜索麻烦)，查询的关键字不能太荣誉(因为用的是包含式查询，并没有特别高的智能匹配,如果本方法返回空数组，可以尝试精简关键字或者换个关键字)",
+    @Tool(description = "根据名称模糊搜索用友数据字典条目及其类id，注意，nameQuery的值不易太长，虽然是模糊匹配，但是用的是like %nameQuery%的方式，你需要保证关键字不能太少(太少导致拆卸你的数据特别多，搜索麻烦)，查询的关键字不能太冗余(因为用的是包含式查询，并没有特别高的智能匹配,如果本方法返回空数组，可以尝试精简关键字或者换个关键字)",
             name = "searchDataDictItemsByName"
     )
     public List<DataDictItem> searchDataDictItemsByName(
-            @ToolParam(description = "用于模糊搜索的名称查询字符串，最好是一个单词，比如:用户权限申请、业务单元、流程生产订单、生产报告、人员等等") String nameQuery
+            @ToolParam(description = "用于模糊搜索的名称查询字符串，仅允许是一个单词，比如:用户权限申请、业务单元、流程生产订单、生产报告、人员等等,如果传入了多个单词，本方法将会放弃返回值，视为错误调用") String nameQuery
     ) {
         List<DataDictItem> allItems = dataDictDownloader.downloadDataDictItems();
         if (nameQuery == null || nameQuery.trim().isEmpty()) {

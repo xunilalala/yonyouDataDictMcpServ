@@ -4,6 +4,7 @@ package win.ixuni.yonyoudatadict.util;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import win.ixuni.yonyoudatadict.cache.LRUCache;
 import win.ixuni.yonyoudatadict.config.DataDictConfig;
 import win.ixuni.yonyoudatadict.model.DataDictDetail;
 import win.ixuni.yonyoudatadict.model.DataDictItem;
@@ -50,11 +52,26 @@ public class DataDictDownloader {
 
     // 数据字典项列表缓存
     private volatile List<DataDictItem> dataDictItemsCache = null;
+
+    /**
+     * -- GETTER --
+     * 获取DataDictDownloader实例的静态方法
+     * 供处理器使用，避免循环依赖
+     */
+    // 静态实例引用，用于处理器访问
+    @Getter
+    private static DataDictDownloader instance;
+
+    // 数据字典详情LRU缓存
+    private final LRUCache<String, DataDictDetail> detailCache;
     
     @Autowired
     public DataDictDownloader(DataDictConfig config) {
         this.config = config;
         this.restTemplate = new RestTemplate();
+
+        // 初始化详情缓存
+        this.detailCache = new LRUCache<>(config);
 
         // 设置RestTemplate使用UTF-8编码
         this.restTemplate.getMessageConverters()
@@ -68,15 +85,42 @@ public class DataDictDownloader {
         this.processors.add(new RefClassPathHrefProcessor());
         // 添加自定义字段移除处理器
         this.processors.add(new CustomFieldRemovalProcessor(config));
+
+        // 设置静态实例
+        instance = this;
     }
-    
+
+    /**
+     * 清除详情缓存
+     */
+    public void clearDetailCache() {
+        if (detailCache != null) {
+            synchronized (detailCache) {
+                detailCache.clear();
+                logger.info("数据字典详情缓存已清除");
+            }
+        }
+    }
+
     /**
      * 下载并解析数据字典详情
      *
-     * @param classId 类ID
+     * @param classId         类ID
+     * @param applyProcessors 是否应用处理器链
      * @return 数据字典详情
      */
-    public DataDictDetail downloadDataDictDetail(String classId) {
+    public DataDictDetail downloadDataDictDetail(String classId, boolean applyProcessors) {
+        // 先检查缓存
+        if (config.isCacheEnabled()) {
+            synchronized (detailCache) {
+                DataDictDetail cachedDetail = detailCache.get(classId);
+                if (cachedDetail != null) {
+                    logger.info("从缓存返回数据字典详情，classId: {}", classId);
+                    return cachedDetail;
+                }
+            }
+        }
+
         try {
             String currentAppCode = config.getDefaultAppCode();
             if (currentAppCode == null || currentAppCode.trim().isEmpty()) {
@@ -94,11 +138,22 @@ public class DataDictDownloader {
 
             DataDictDetail detail = parseDetailJson(jsonContent, classId);
 
-            // 应用处理器链
-            for (DataDictProcessor processor : processors) {
-                detail = processor.process(detail);
-                if (detail == null) {
-                    break;
+            // 根据参数决定是否应用处理器链
+            if (applyProcessors) {
+                // 应用处理器链
+                for (DataDictProcessor processor : processors) {
+                    detail = processor.process(detail);
+                    if (detail == null) {
+                        break;
+                    }
+                }
+            }
+
+            // 缓存结果（只缓存经过完整处理的结果）
+            if (detail != null && config.isCacheEnabled() && applyProcessors) {
+                synchronized (detailCache) {
+                    detailCache.put(classId, detail);
+                    logger.info("数据字典详情已缓存，classId: {}", classId);
                 }
             }
 
@@ -296,6 +351,28 @@ public class DataDictDownloader {
         }
 
         return true; // 默认认为有效
+    }
+
+    /**
+     * 下载并解析数据字典详情
+     *
+     * @param classId 类ID
+     * @return 数据字典详情
+     */
+    public DataDictDetail downloadDataDictDetail(String classId) {
+        return downloadDataDictDetail(classId, true);
+    }
+
+    /**
+     * 获取详情缓存大小
+     */
+    public int getDetailCacheSize() {
+        if (detailCache != null) {
+            synchronized (detailCache) {
+                return detailCache.size();
+            }
+        }
+        return 0;
     }
 
     /**
