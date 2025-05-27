@@ -26,22 +26,6 @@
 - **JSON 处理**：FastJSON 2.0.51
 - **容器化**：Docker & Docker Compose
 
-## 可用工具函数
-
-项目通过 MCP 协议暴露以下工具函数：
-
-### 1. getDataDictDetail
-- **描述**：根据类ID获取用友数据字典详情
-- **参数**：
-  - `classId` (string)：类ID
-- **返回**：完整的数据字典详情信息
-
-### 2. searchDataDictItemsByName
-- **描述**：根据名称模糊搜索用友数据字典条目及其类ID
-- **参数**：
-  - `nameQuery` (string)：用于模糊搜索的名称查询字符串
-- **返回**：匹配的数据字典项列表
-
 ## 快速开始
 
 ### 环境要求
@@ -50,7 +34,7 @@
 - Maven 3.6 或更高版本
 - Docker（可选，用于容器化部署）
 
-### Docker 部署 (推荐)
+### Docker 部署
 
 #### 方式一：Docker Compose（推荐）
 
@@ -79,7 +63,7 @@ docker run -d \
   yonyou-datadict
 ```
 
-### 手动启动
+### 手动启动/stdio
 
 #### 方式一：Maven 启动
 
@@ -94,6 +78,7 @@ docker run -d \
    ```bash
    ./mvnw spring-boot:run
    ```
+   执行命令后默认启动的是sse模式,本机推荐通过标准输入输出,mcp连接更可靠,请向下查看 SSE与STDIO模式
 
 #### 方式二：使用 IDE
 
@@ -177,20 +162,50 @@ src/
 }
 ```
 
-## 开发指南
+## SSE 与 STDIO 模式
 
-### 添加新的工具函数
+本项目提供了基于 HTTP 的 SSE (Server-Sent Events) 以及基于本机进程通信的 STDIO 模式：
 
-1. 在 `DataDictService` 类中添加新方法
-2. 使用 `@Tool` 注解标记方法
-3. 使用 `@ToolParam` 注解标记参数
-4. 重新启动应用
+- **SSE 模式**：可快速通过 Docker 启动，但网络不稳定时需要重启 MCP 客户端。
+- **STDIO 模式**：依赖本机进程通信，连接更稳定，推荐使用。需注意此模式,依然需要占用端口，可通过 `-Dserver.port=xxxx` 进行调整。
 
-### 自定义数据处理
+### 启动示例
 
-1. 实现 `DataDictProcessor` 接口
-2. 在配置类中注册新的处理器
-3. 更新服务类以使用新处理器
+启动stdio需要提前将代码通过maven打成jar包,并记录路径,下面以42661端口,路径yourApp.jar为例
+
+```bash
+java -Dfile.encoding=UTF-8 \
+     -Dspring.ai.mcp.server.stdio=true \
+     -Dserver.port=42661 \
+     -jar yourApp.jar
+```
+
+idea的通义灵码(参数部分参上面)
+
+![image-20250527163123799](README.assets/image-20250527163123799.png)
+
+vsCode：
+
+打开配置搜索mcp->打开setting.json,新增关于yongyouDataDict的部分
+
+```
+ "mcp": {
+        "servers": {
+            "yonYouDataDict": {
+                "type": "stdio",
+                "command": "java",
+                "args": [
+                    "-Dspring.ai.mcp.server.stdio=true",
+                    "-Dfile.encoding=UTF-8",
+                    "-jar",
+                    "E:\\xxxx.jar"
+                ]
+            }
+        }
+    },
+```
+
+> 如果搜索英文有返回但中文搜索无结果，请务必添加 `-Dfile.encoding=UTF-8` 选项。
 
 ## 常见问题
 

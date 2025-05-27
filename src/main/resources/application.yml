@@ -7,11 +7,6 @@ spring:
         type: SYNC #同步
   main:
     banner-mode: off
-  http:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
   servlet:
     multipart:
       file-size-threshold: 0

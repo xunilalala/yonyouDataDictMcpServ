@@ -3,11 +3,6 @@ spring:
     banner-mode: off
   application:
     name: yonyou-datadict
-  http:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
   servlet:
     multipart:
       file-size-threshold: 0
