@@ -3,12 +3,27 @@ spring:
     banner-mode: off
   application:
     name: yonyou-datadict
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  servlet:
+    multipart:
+      file-size-threshold: 0
+      max-file-size: 1MB
+      max-request-size: 10MB
   
 server:
   port: 8080
   error:
     include-message: always
     include-binding-errors: always
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 management:
   endpoints:
@@ -41,3 +56,6 @@ logging:
     rollingpolicy:
       max-file-size: 10MB
       max-history: 10
+  charset:
+    console: UTF-8
+    file: UTF-8

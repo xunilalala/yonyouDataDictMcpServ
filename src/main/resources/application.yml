@@ -1,6 +1,22 @@
 spring:
+  ai:
+    mcp:
+      server:
+        name: YonYouDataDict    # MCP服务器名称
+        version: 1.0.0                # 服务器版本号
+        type: SYNC #同步
   main:
     banner-mode: off
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  servlet:
+    multipart:
+      file-size-threshold: 0
+      max-file-size: 1MB
+      max-request-size: 10MB
 data-dict:
   base-url: https://media.oyonyou.com:18000/oyonyou/dict
   static-path: /static/js/data-dict-tree.js
@@ -9,3 +25,8 @@ data-dict:
   cache-size: 100
   custom-field-removal:
     enabled: true
+
+logging:
+  charset:
+    console: UTF-8
+    file: UTF-8

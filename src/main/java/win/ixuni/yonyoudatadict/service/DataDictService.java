@@ -60,7 +60,7 @@ public class DataDictService {
             name = "searchDataDictItemsByName"
     )
     public List<DataDictItem> searchDataDictItemsByName(
-            @ToolParam(description = "用于模糊搜索的名称查询字符串，仅允许是一个单词，比如:用户权限申请、业务单元、流程生产订单、生产报告、人员等等,如果传入了多个单词，本方法将会放弃返回值，视为错误调用") String nameQuery
+            @ToolParam(description = "用于模糊搜索的名称查询字符串，仅允许是一个单词，比如:用户权限申请、org、流程生产订单、factory、人员等等,如果传入了多个单词，本方法将会放弃返回值，视为错误调用") String nameQuery
     ) {
         List<DataDictItem> allItems = dataDictDownloader.downloadDataDictItems();
         if (nameQuery == null || nameQuery.trim().isEmpty()) {

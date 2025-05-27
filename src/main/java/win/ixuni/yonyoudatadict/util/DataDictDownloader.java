@@ -73,11 +73,20 @@ public class DataDictDownloader {
         // 初始化详情缓存
         this.detailCache = new LRUCache<>(config);
 
-        // 设置RestTemplate使用UTF-8编码
-        this.restTemplate.getMessageConverters()
-                .stream()
-                .filter(converter -> converter instanceof StringHttpMessageConverter)
-                .forEach(converter -> ((StringHttpMessageConverter) converter).setDefaultCharset(StandardCharsets.UTF_8));
+        // 设置RestTemplate使用UTF-8编码 - 增强版本
+        this.restTemplate.getMessageConverters().clear();
+
+        // 添加UTF-8字符串转换器
+        StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
+        stringConverter.setWriteAcceptCharset(false);
+        this.restTemplate.getMessageConverters().add(stringConverter);
+
+        // 重新添加其他必要的转换器
+        this.restTemplate.getMessageConverters().addAll(
+                new RestTemplate().getMessageConverters().stream()
+                        .filter(converter -> !(converter instanceof StringHttpMessageConverter))
+                        .collect(java.util.stream.Collectors.toList())
+        );
         
         // 添加默认处理器
         this.processors.add(new DefaultDataDictProcessor());
@@ -311,7 +320,13 @@ public class DataDictDownloader {
 
             if (content != null) {
                 logger.info("成功获取内容，长度: {}", content.length());
-                return content;
+                // 验证内容编码
+                if (isValidEncoding(content)) {
+                    return content;
+                } else {
+                    logger.warn("检测到可能的编码问题，但仍然返回内容");
+                    return content;
+                }
             }
 
             return null;

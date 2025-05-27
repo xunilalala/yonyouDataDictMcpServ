@@ -20,6 +20,11 @@ RUN chmod +x mvnw && ./mvnw clean package -DskipTests
 # 运行阶段
 FROM openjdk:17.0.1-jdk-slim
 
+# 设置环境变量确保使用UTF-8编码
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    LANGUAGE=C.UTF-8
+
 # 设置工作目录
 WORKDIR /app
 
@@ -41,5 +46,5 @@ USER spring
 # 暴露端口
 EXPOSE 8080
 
-# 设置JVM参数和启动命令
-ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-jar", "/app/app.jar"]
+# 设置JVM参数和启动命令，添加编码相关参数
+ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-Dfile.encoding=UTF-8", "-Dsun.jnu.encoding=UTF-8", "-Duser.language=zh", "-Duser.country=CN", "-jar", "/app/app.jar"]
