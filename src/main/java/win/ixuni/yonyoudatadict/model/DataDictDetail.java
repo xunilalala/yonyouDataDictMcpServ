@@ -45,6 +45,12 @@ public class DataDictDetail {
 
         private String refClassPathHref;
 
+        // 新增字段：默认值
+        private String defaultValue;
+
+        // 新增字段：数据范围说明
+        private String dataScope;
+
     }
 
 }

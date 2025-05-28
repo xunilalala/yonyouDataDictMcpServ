@@ -26,19 +26,24 @@ public class healthCheckController {
         return "OK";
     }
 
+    // 测试工具方法：获取所有数据字典条目
+    @RequestMapping("/tool/items")
+    public List<DataDictItem> testToolGetAllItems() {
+        return dataDictService.getDataDictItemsForController();
+    }
 
     // 测试工具方法：根据类ID获取数据字典详情
     @RequestMapping("/tool/detail/{classId}")
     public DataDictDetail testToolGetDetail(
             @PathVariable("classId") String classId) {
-        return dataDictService.downloadDataDictDetail(classId);
+        return dataDictService.getDataDictDetailForController(classId);
     }
 
     // 测试工具方法：根据名称搜索数据字典条目
     @RequestMapping("/tool/search")
     public List<DataDictItem> testToolSearch(
             @RequestParam(value = "name", required = false, defaultValue = "") String nameQuery) {
-        return dataDictService.searchDataDictItemsByName(nameQuery);
+        return dataDictService.searchDataDictItemsByNameForController(nameQuery);
     }
 
 }

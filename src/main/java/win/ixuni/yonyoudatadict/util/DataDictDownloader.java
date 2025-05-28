@@ -418,6 +418,10 @@ public class DataDictDownloader {
                     property.setNullable(propObj.getBooleanValue("nullable"));
                     property.setRefClassPathHref(propObj.getString("refClassPathHref"));
 
+                    // 解析新增字段
+                    property.setDefaultValue(propObj.getString("defaultValue"));
+                    property.setDataScope(propObj.getString("dataScope"));
+
                     properties.add(property);
                 }
                 detail.setProperties(properties);
