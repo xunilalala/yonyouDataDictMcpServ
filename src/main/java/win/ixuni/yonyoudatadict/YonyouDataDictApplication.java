@@ -25,7 +25,7 @@ public class YonyouDataDictApplication {
     public CommandLineRunner startupRunner() {
         return args -> {
             System.out.println("=================================================================");
-            System.out.println("                 YonBIP高级版数据字典MCP已成功启动!                  ");
+            System.out.println("                      ML数据字典已成功启动!                        ");
             System.out.println("=================================================================");
         };
     }

@@ -20,12 +20,12 @@
 
 ### 当前支持的版本
 
-| 版本类型          | 应用代码示例            | 解析方式                    | 适配器                   | 状态     |
-|---------------|-------------------|-------------------------|-----------------------|--------|
-| **YonBIP高级版** | `yonbip3ddc`      | 解析JS中的dataDictIndexData | YonBipAdvancedAdapter | ✅ 已实现  |
-| **YonBIP旗舰版** | `yonbip-flagship` | 解析JS，但格式不同              | YonBipFlagshipAdapter | ✅ 已实现  |
-| **NC65**      | `ncddc0065`       | 解析HTML页面                | NC65Adapter           | ✅ 已实现  |
-| **NCCloud**   | `nccloud`         | API接口方式                 | 待实现                   | 🚧 规划中 |
+| 版本类型          | 应用代码示例            | 解析方式                    | 适配器                   | 状态    |
+|---------------|-------------------|-------------------------|-----------------------|-------|
+| **YonBIP高级版** | `yonbip3ddc`      | 解析JS中的dataDictIndexData | YonBipAdvancedAdapter | ✅ 已实现 |
+| **YonBIP旗舰版** | `yonbip-flagship` | 解析JS，但格式不同              | YonBipFlagshipAdapter | ✅ 已实现 |
+| **NC65**      | `ncddc0065`       | 解析HTML页面                | NC65Adapter           | ✅ 已实现 |
+| **NCCloud**   | `nccloud`         | 解析HTML页面                | NCCloudAdapter        | ✅ 已实现 |
 
 ## 功能特性
 
@@ -58,9 +58,10 @@
 
 ### Docker 部署
 
-#### 方式一：Docker Compose（推荐）
-
 ```bash
+# 下载仓库代码
+git clone xxx
+
 # 构建并启动服务
 docker-compose up --build -d
 
@@ -70,43 +71,11 @@ docker-compose logs -f
 # 停止服务
 docker-compose down
 ```
-
-#### 方式二：Docker 手动构建
-
-```bash
-# 构建镜像
-docker build -t yonyou-datadict .
-
-# 运行容器
-docker run -d \
-  --name yonyou-datadict-app \
-  -p 8080:8080 \
-  -e SPRING_PROFILES_ACTIVE=prod \
-  yonyou-datadict
-```
-
 ### 手动启动/stdio
 
-#### 方式一：Maven 启动
-
-1. **克隆项目并安装依赖**
-   ```bash
-   git clone <项目地址>
-   cd yonyouDataDict
-   ./mvnw clean install
-   ```
-
-2. **启动应用**
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-   执行命令后默认启动的是sse模式,本机推荐通过标准输入输出,mcp连接更可靠,请向下查看 SSE与STDIO模式
-
-#### 方式二：使用 IDE
-
-1. 导入项目到你的 IDE（IntelliJ IDEA 或 Eclipse）
-2. 等待 Maven 依赖下载完成
-3. 运行 `YonyouDataDictApplication` 主类
+```bash
+java -jar yonyou-data-dict.jar # 这里放打包后的jar包
+```
 
 ### 验证启动
 
@@ -146,7 +115,7 @@ data-dict:
 
 # YonBIP旗舰版
 data-dict:
-  default-app-code: yonbip-flagship-premium
+  default-app-code: yonbip3r6bip2
 
 # NC65
 data-dict:
@@ -168,7 +137,7 @@ data-dict:
 ├── model/
 │   └── YonyouVersion          # 版本枚举
 └── util/
-    └── DataDictDownloader     # 重构后的下载器
+    └── DataDictDownloader     # 下载器
 ```
 
 ### 工作流程
@@ -308,9 +277,9 @@ java -Dfile.encoding=UTF-8 \
 ### Q: 如何切换到不同的用友版本？
 
 A: 在 `application.yml` 中修改 `data-dict.default-app-code` 配置即可：
-
+比如
 - YonBIP高级版：`yonbip3ddc`
-- YonBIP旗舰版：`yonbip-flagship-premium`
+- YonBIP旗舰版：`yonbip3r6bip2`
 - NC65：`ncddc0065`
 
 ### Q: 如何验证当前支持的版本？
