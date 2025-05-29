@@ -1,11 +1,31 @@
-# 用友数据字典 MCP 服务
+# 用友数据字典 MCP 服务 - 多版本架构
 
 > ⚠️本项目基于用友对外公开的字典服务搭建，完全出于个人学习目的开发。
 
 ## 项目介绍
 
-本项目是一个基于 Spring Boot 3.x 和 Spring AI 构建的 Model Context Protocol (MCP) 服务器，用于访问和查询用友数据字典服务(
-目前仅支持YonBIP高级版)。项目提供了标准化的 MCP 接口，可以与支持 MCP 协议的 AI 客户端集成，实现对用友数据字典的智能查询和检索。
+本项目是一个基于 Spring Boot 3.x 和 Spring AI 构建的 Model Context Protocol (MCP) 服务器，用于访问和查询用友数据字典服务。
+**现已支持多版本架构，可根据不同的 default-app-code 自动适配不同的用友版本。**
+
+## 🎯 架构升级亮点
+
+### 多版本支持架构
+
+项目采用**策略模式 + 工厂模式**实现了统一的多版本适配架构：
+
+- **自动版本检测**：根据 `default-app-code` 自动识别用友版本类型
+- **版本适配器**：每个版本有独立的适配器处理不同的解析逻辑
+- **统一接口**：对外接口保持不变，内部根据版本选择不同策略
+- **易于扩展**：新增版本只需实现对应的适配器即可
+
+### 当前支持的版本
+
+| 版本类型          | 应用代码示例            | 解析方式                    | 适配器                   | 状态     |
+|---------------|-------------------|-------------------------|-----------------------|--------|
+| **YonBIP高级版** | `yonbip3ddc`      | 解析JS中的dataDictIndexData | YonBipAdvancedAdapter | ✅ 已实现  |
+| **YonBIP旗舰版** | `yonbip-flagship` | 解析JS，但格式不同              | YonBipFlagshipAdapter | ✅ 已实现  |
+| **NC65**      | `ncddc0065`       | 解析HTML页面                | NC65Adapter           | ✅ 已实现  |
+| **NCCloud**   | `nccloud`         | API接口方式                 | 待实现                   | 🚧 规划中 |
 
 ## 功能特性
 
@@ -15,6 +35,7 @@
 - 💾 **缓存机制**：内置 LRU 缓存，提升查询性能
 - 🐳 **容器化部署**：支持 Docker 和 Docker Compose 部署
 - 📊 **健康检查**：集成 Spring Boot Actuator，提供服务健康监控
+- 🎯 **多版本支持**：自动适配不同用友版本，支持JS解析、HTML解析等多种方式
 
 ## 技术栈
 
@@ -25,6 +46,7 @@
 - **HTML 解析**：Jsoup 1.17.2
 - **JSON 处理**：FastJSON 2.0.51
 - **容器化**：Docker & Docker Compose
+- **架构模式**：策略模式 + 工厂模式
 
 ## 快速开始
 
@@ -91,6 +113,8 @@ docker run -d \
 启动成功后，可以通过以下方式验证：
 
 - **健康检查**：访问 `http://localhost:8080/actuator/health`
+- **架构状态**：访问 `http://localhost:8080/check/architecture/status`
+- **版本检测**：访问 `http://localhost:8080/check/architecture/detect?appCode=yonbip3ddc`
 
 ## 配置说明
 
@@ -101,8 +125,8 @@ docker run -d \
 ```yaml
 data-dict:
   base-url: https://media.oyonyou.com:18000/oyonyou/dict  # 用友数据字典服务地址
-  static-path: /static/js/data-dict-tree.js              # 静态资源路径
-  default-app-code: yonbip3ddc                           # 默认应用代码
+  static-path: /static/js/data-dict-tree.js              # 静态资源路径（高级版使用）
+  default-app-code: yonbip3ddc                           # 默认应用代码（决定版本类型）
   cache-enabled: true                                    # 是否启用缓存
   cache-size: 100                                        # 缓存大小
 ```
@@ -111,6 +135,72 @@ data-dict:
 
 生产环境配置位于 `src/main/resources/application-prod.yml`，可根据需要调整。
 
+### 多版本配置示例
+
+不同版本的配置示例：
+
+```yaml
+# YonBIP高级版（当前默认）
+data-dict:
+  default-app-code: yonbip3ddc
+
+# YonBIP旗舰版
+data-dict:
+  default-app-code: yonbip-flagship-premium
+
+# NC65
+data-dict:
+  default-app-code: ncddc0065
+```
+
+## 架构详解
+
+### 核心组件
+
+```
+├── adapter/                    # 版本适配器
+│   ├── VersionAdapter         # 适配器接口
+│   ├── VersionAdapterFactory  # 适配器工厂
+│   └── impl/                  # 具体适配器实现
+│       ├── YonBipAdvancedAdapter    # YonBIP高级版
+│       ├── YonBipFlagshipAdapter    # YonBIP旗舰版
+│       └── NC65Adapter              # NC65版本
+├── model/
+│   └── YonyouVersion          # 版本枚举
+└── util/
+    └── DataDictDownloader     # 重构后的下载器
+```
+
+### 工作流程
+
+1. **版本检测**：系统启动时根据 `default-app-code` 自动检测版本
+2. **适配器选择**：工厂模式选择对应的版本适配器
+3. **URL构建**：适配器根据版本特点构建正确的请求URL
+4. **内容解析**：适配器使用对应的解析策略（JS/HTML/API）
+5. **统一返回**：所有版本返回统一的数据格式
+
+### 扩展新版本
+
+要添加新版本支持，只需：
+
+1. 在 `YonyouVersion` 枚举中添加新版本
+2. 实现 `VersionAdapter` 接口
+3. 使用 `@Component` 注解让Spring自动注册
+
+## API接口
+
+### 健康检查相关
+
+- `GET /check` - 基础健康检查
+- `GET /check/architecture/status` - 查看当前架构状态和支持版本
+- `GET /check/architecture/detect?appCode=xxx` - 检测指定应用代码的版本
+
+### 数据字典相关
+
+- `GET /check/tool/items` - 获取所有数据字典条目
+- `GET /check/tool/detail/{classId}` - 获取指定类的详情
+- `GET /check/tool/search?name=xxx` - 按名称搜索数据字典
+
 ## 项目结构
 
 ```
@@ -118,23 +208,30 @@ src/
 ├── main/
 │   ├── java/win/ixuni/yonyoudatadict/
 │   │   ├── YonyouDataDictApplication.java    # 主启动类
+│   │   ├── adapter/                          # 多版本适配器架构
+│   │   │   ├── VersionAdapter.java          # 适配器接口
+│   │   │   ├── VersionAdapterFactory.java   # 适配器工厂
+│   │   │   └── impl/                        # 具体实现
+│   │   │       ├── YonBipAdvancedAdapter.java
+│   │   │       ├── YonBipFlagshipAdapter.java
+│   │   │       └── NC65Adapter.java
 │   │   ├── cache/
 │   │   │   └── LRUCache.java                # LRU缓存实现
 │   │   ├── config/
 │   │   │   └── DataDictConfig.java          # 配置类
 │   │   ├── controller/
-│   │   │   └── healthCheckController.java   # 健康检查控制器
+│   │   │   └── healthCheckController.java   # 健康检查控制器（已扩展）
 │   │   ├── model/
 │   │   │   ├── DataDictDetail.java          # 数据字典详情模型
-│   │   │   └── DataDictItem.java            # 数据字典项模型
+│   │   │   ├── DataDictItem.java            # 数据字典项模型
+│   │   │   └── YonyouVersion.java           # 版本枚举（新增）
 │   │   ├── processor/
 │   │   │   ├── DataDictProcessor.java       # 数据字典处理器接口
-│   │   │   └── DefaultDataDictProcessor.java # 默认处理器实现
+│   │   │   └── ...                          # 处理器实现
 │   │   ├── service/
-│   │   │   ├── DataDictCacheService.java    # 缓存服务
 │   │   │   └── DataDictService.java         # 核心业务服务
 │   │   └── util/
-│   │       └── DataDictDownloader.java      # 数据下载工具
+│   │       └── DataDictDownloader.java      # 多版本下载工具（重构）
 │   └── resources/
 │       ├── application.yml                  # 主配置文件
 │       └── application-prod.yml             # 生产环境配置
@@ -142,12 +239,15 @@ src/
 
 ## MCP 客户端集成
 
-本服务仅实现了SSE，可以与以下客户端集成：
+本服务实现了SSE和STDIO两种模式，可以与以下客户端集成：
 
 - Claude Desktop
+- VS Code (通义灵码、GitHub Copilot等)
 - 其他支持 MCP 的 AI 客户端
 
-### MCP 客户端配置示例(vsCode)
+### MCP 客户端配置示例
+
+#### VS Code配置示例
 
 ```json
 {
@@ -156,6 +256,27 @@ src/
       "yonyou": {
         "type": "sse",
         "url": "http://127.0.0.1:8080/sse"
+      }
+    }
+  }
+}
+```
+
+#### 通义灵码配置示例
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "yonYouDataDict": {
+        "type": "stdio",
+        "command": "java",
+        "args": [
+          "-Dspring.ai.mcp.server.stdio=true",
+          "-Dfile.encoding=UTF-8",
+          "-jar",
+          "E:\\your_path\\yonyouDataDict-0.0.3-SNAPSHOT.jar"
+        ]
       }
     }
   }
@@ -180,61 +301,52 @@ java -Dfile.encoding=UTF-8 \
      -jar yourApp.jar
 ```
 
-idea的通义灵码(参数部分参上面)
-
-![image-20250527163123799](README.assets/image-20250527163123799.png)
-
-vsCode：
-
-打开配置搜索mcp->打开setting.json,新增关于yongyouDataDict的部分
-
-```
- "mcp": {
-        "servers": {
-            "yonYouDataDict": {
-                "type": "stdio",
-                "command": "java",
-                "args": [
-                    "-Dspring.ai.mcp.server.stdio=true",
-                    "-Dfile.encoding=UTF-8",
-                    "-jar",
-                    "E:\\xxxx.jar"
-                ]
-            }
-        }
-    },
-```
-
 > 如果搜索英文有返回但中文搜索无结果，请务必添加 `-Dfile.encoding=UTF-8` 选项。
 
 ## 常见问题
+
+### Q: 如何切换到不同的用友版本？
+
+A: 在 `application.yml` 中修改 `data-dict.default-app-code` 配置即可：
+
+- YonBIP高级版：`yonbip3ddc`
+- YonBIP旗舰版：`yonbip-flagship-premium`
+- NC65：`ncddc0065`
+
+### Q: 如何验证当前支持的版本？
+
+A: 访问 `http://localhost:8080/check/architecture/status` 查看当前架构状态和所有支持的版本。
+
+### Q: 如何添加新的版本支持？
+
+A:
+
+1. 在 `YonyouVersion` 枚举中添加新版本定义
+2. 创建对应的适配器类实现 `VersionAdapter` 接口
+3. 使用 `@Component` 注解让Spring自动注册
 
 ### Q: 服务启动失败怎么办？
 A: 请检查：
 - Java 版本是否为 17 或更高
 - 网络连接是否正常（需要访问用友服务）
 - 端口是否被占用
-- 用友的家人们基本都会java,自己看看代码,修修就行了
+- `default-app-code` 配置是否正确
 
 ### Q: 缓存如何清理？
 
-A: 重启应用会自动清理内存缓存.系统运行中如果超过了允许的最大缓存个数,会自动清理最久未使用的缓存
+A: 重启应用会自动清理内存缓存。系统运行中如果超过了允许的最大缓存个数，会自动清理最久未使用的缓存。
 
 ### Q: 如何修改数据源？
-A: 目前基于www.oyonyou.com 抓包的url,如果情况特殊,可以修改`application.yml` 中的 `data-dict.base-url` 配置。
 
-### Q: 现在查看的是2312的,我想让AI查看NC65的,如何操作？
+A: 目前基于 www.oyonyou.com 抓包的url，如果情况特殊，可以修改 `application.yml` 中的 `data-dict.base-url` 配置。
 
-A: 目前https://www.oyonyou.com/dict/yonbip3ddcr5/ 访问这个打开的是2312的字典,暂称yonbip3ddcr5为应用code,那么在application中设置
-default-app-code 为 yonbip3ddcr5 即为访问2312的字典,NC65的同理,替换应用code为 ncddc0065 即可(
-目前仅支持高级版,nc65只是举例)
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request！
+欢迎提交 Issue 和 Pull Request！特别是新版本适配器的贡献。
 
 ## 联系方式
 
-如有问题，请通过 GitHub Issues 联系. 非bug不处理
+如有问题，请通过 GitHub Issues 联系。
 
-如有建议,请通过邮箱:maolei01@yonyou.com 联系。
-> 邮箱联系时,请使用yonyou邮箱联系
+如有建议，请通过邮箱：maolei01@yonyou.com 联系。
+> 邮箱联系时，请使用yonyou邮箱联系

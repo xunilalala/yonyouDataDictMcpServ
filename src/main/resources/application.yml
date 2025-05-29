@@ -12,10 +12,16 @@ spring:
       file-size-threshold: 0
       max-file-size: 1MB
       max-request-size: 10MB
+
 data-dict:
   base-url: https://media.oyonyou.com:18000/oyonyou/dict
   static-path: /static/js/data-dict-tree.js
-  default-app-code: yonbip3ddc
+  # 支持多种版本的应用代码示例：
+  # YonBIP高级版: yonbip3ddc
+  # YonBIP旗舰版: yonbip3r6bip2, yonbip3r5bip2 等
+  # NC65: nc65, nc0065 等
+  # NCCloud: nccddc1909, nccloud 等
+  default-app-code: ncddc0065  # 修改为NCCloud示例代码
   cache-enabled: true
   cache-size: 100
   custom-field-removal:
@@ -25,3 +31,6 @@ logging:
   charset:
     console: UTF-8
     file: UTF-8
+  level:
+    win.ixuni.yonyoudatadict.adapter: DEBUG  # 启用适配器调试日志
+    win.ixuni.yonyoudatadict.processor: DEBUG # 启用处理器调试日志

@@ -1,9 +1,5 @@
 package win.ixuni.yonyoudatadict.util;
 
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import win.ixuni.yonyoudatadict.adapter.VersionAdapter;
+import win.ixuni.yonyoudatadict.adapter.VersionAdapterFactory;
 import win.ixuni.yonyoudatadict.cache.LRUCache;
 import win.ixuni.yonyoudatadict.config.DataDictConfig;
 import win.ixuni.yonyoudatadict.model.DataDictDetail;
 import win.ixuni.yonyoudatadict.model.DataDictItem;
+import win.ixuni.yonyoudatadict.model.YonyouVersion;
 import win.ixuni.yonyoudatadict.processor.CustomFieldRemovalProcessor;
 import win.ixuni.yonyoudatadict.processor.DataDictProcessor;
 import win.ixuni.yonyoudatadict.processor.DefaultDataDictProcessor;
@@ -27,11 +26,10 @@ import win.ixuni.yonyoudatadict.processor.RefClassPathHrefProcessor;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
 
 /**
- * 用友数据字典下载工具类
+ * 用友数据字典下载工具类 - 多版本适配架构
  */
 @Component
 public class DataDictDownloader {
@@ -40,12 +38,8 @@ public class DataDictDownloader {
     
     private final DataDictConfig config;
     private final RestTemplate restTemplate;
-    
-    // 用于提取JS中的JSON数组的正则表达式
-    private static final Pattern DATA_PATTERN = Pattern.compile("var\\s+dataDictIndexData\\s*=\\s*(\\[.*?\\])\\s*;", Pattern.DOTALL);
-    
-    // 数据字典详情API路径模板
-    private static final String DETAIL_API_TEMPLATE = "/%s/dict/%s.json";
+
+    private final VersionAdapterFactory adapterFactory;
     
     // 处理器链
     private List<DataDictProcessor> processors = new ArrayList<>();
@@ -66,17 +60,16 @@ public class DataDictDownloader {
     private final LRUCache<String, DataDictDetail> detailCache;
     
     @Autowired
-    public DataDictDownloader(DataDictConfig config) {
+    public DataDictDownloader(DataDictConfig config, VersionAdapterFactory adapterFactory) {
         this.config = config;
+        this.adapterFactory = adapterFactory;
         this.restTemplate = new RestTemplate();
 
         // 初始化详情缓存
         this.detailCache = new LRUCache<>(config);
 
-        // 设置RestTemplate使用UTF-8编码 - 增强版本
+        // 设置RestTemplate使用UTF-8编码
         this.restTemplate.getMessageConverters().clear();
-
-        // 添加UTF-8字符串转换器
         StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
         stringConverter.setWriteAcceptCharset(false);
         this.restTemplate.getMessageConverters().add(stringConverter);
@@ -97,6 +90,13 @@ public class DataDictDownloader {
 
         // 设置静态实例
         instance = this;
+
+        // 检测当前版本
+        String currentAppCode = config.getDefaultAppCode();
+        if (currentAppCode != null && !currentAppCode.trim().isEmpty()) {
+            YonyouVersion version = adapterFactory.detectVersion(currentAppCode);
+            logger.info("当前配置版本: {} ({})", version.getDisplayName(), version.getParseType());
+        }
     }
 
     /**
@@ -136,19 +136,28 @@ public class DataDictDownloader {
                 logger.error("默认应用代码 (default-app-code) 未在配置文件中设置");
                 return null;
             }
-            String url = buildDetailUrl(currentAppCode, classId);
-            logger.info("下载数据字典详情，URL: {}", url);
 
-            String jsonContent = downloadWithProperEncoding(url);
-            if (jsonContent == null) {
+            // 获取对应版本的适配器
+            VersionAdapter adapter = adapterFactory.getAdapter(currentAppCode);
+            if (adapter == null) {
+                logger.error("无法找到适合的版本适配器，应用代码: {}", currentAppCode);
+                return null;
+            }
+
+            String url = adapter.buildDetailUrl(config.getBaseUrl(), currentAppCode, classId);
+            logger.info("使用 {} 下载数据字典详情，URL: {}",
+                    adapter.getSupportedVersion().getDisplayName(), url);
+
+            String content = downloadWithProperEncoding(url, adapter);
+            if (content == null) {
                 logger.error("无法下载数据字典详情");
                 return null;
             }
 
-            DataDictDetail detail = parseDetailJson(jsonContent, classId);
+            DataDictDetail detail = adapter.parseDataDictDetail(content, classId);
 
             // 根据参数决定是否应用处理器链
-            if (applyProcessors) {
+            if (applyProcessors && detail != null) {
                 // 应用处理器链
                 for (DataDictProcessor processor : processors) {
                     detail = processor.process(detail);
@@ -171,40 +180,6 @@ public class DataDictDownloader {
             logger.error("下载或解析数据字典详情时出错", e);
             return null;
         }
-    }
-    
-    /**
-     * 构建完整的URL
-     */
-    private String buildUrl(String appCode) {
-        return config.getBaseUrl() + "/" + appCode + config.getStaticPath();
-    }
-    
-    /**
-     * 解析JS内容，提取数据字典项
-     */
-    private List<DataDictItem> parseJsContent(String jsContent) {
-        List<DataDictItem> result = new ArrayList<>();
-        
-        Matcher matcher = DATA_PATTERN.matcher(jsContent);
-        if (matcher.find()) {
-            String jsonArrayString = matcher.group(1);
-            try {
-                JSONArray jsonArray = JSON.parseArray(jsonArrayString);
-                for (int i = 0; i < jsonArray.size(); i++) {
-                    JSONObject obj = jsonArray.getJSONObject(i);
-                    String id = obj.getString("id");
-                    String name = obj.getString("name");
-                    result.add(new DataDictItem(id, name));
-                }
-            } catch (Exception e) {
-                logger.error("解析JSON数据时出错", e);
-            }
-        } else {
-            logger.warn("未找到匹配的数据字典格式");
-        }
-        
-        return result;
     }
     
     /**
@@ -242,13 +217,12 @@ public class DataDictDownloader {
      * @return 数据字典项列表
      */
     public List<DataDictItem> downloadDataDictItems() {
-
-        boolean cacheEnabled = config.isCacheEnabled(); // 判断是否开启目录缓存
+        boolean cacheEnabled = config.isCacheEnabled();
 
         if (cacheEnabled) {
             if (dataDictItemsCache != null) {
                 logger.info("从缓存返回数据字典项列表");
-                return new ArrayList<>(dataDictItemsCache); // 返回缓存以提高速度
+                return new ArrayList<>(dataDictItemsCache);
             }
         }
 
@@ -258,27 +232,36 @@ public class DataDictDownloader {
                 logger.error("默认应用代码 (default-app-code) 未在配置文件中设置");
                 return new ArrayList<>();
             }
-            String url = buildUrl(currentAppCode);
-            logger.info("下载数据字典，URL: {}", url);
 
-            String jsContent = downloadWithProperEncoding(url);
-            if (jsContent == null) {
-                logger.error("无法下载数据字典JS文件");
+            // 获取对应版本的适配器
+            VersionAdapter adapter = adapterFactory.getAdapter(currentAppCode);
+            if (adapter == null) {
+                logger.error("无法找到适合的版本适配器，应用代码: {}", currentAppCode);
                 return new ArrayList<>();
             }
 
-            List<DataDictItem> items = parseJsContent(jsContent);
+            String url = adapter.buildDictListUrl(config.getBaseUrl(), currentAppCode);
+            logger.info("使用 {} 下载数据字典，URL: {}",
+                    adapter.getSupportedVersion().getDisplayName(), url);
+
+            String content = downloadWithProperEncoding(url, adapter);
+            if (content == null) {
+                logger.error("无法下载数据字典内容");
+                return new ArrayList<>();
+            }
+
+            List<DataDictItem> items = adapter.parseDataDictItems(content);
 
             if (cacheEnabled) {
                 synchronized (this) {
                     // 双重检查锁定，确保只初始化一次
                     if (dataDictItemsCache == null) {
-                        this.dataDictItemsCache = new ArrayList<>(items); // 存储副本
+                        this.dataDictItemsCache = new ArrayList<>(items);
                         logger.info("数据字典项列表已缓存");
                     }
                 }
             }
-            return items; // 返回新获取或已解析的列表
+            return items;
         } catch (Exception e) {
             logger.error("下载或解析数据字典时出错", e);
             return new ArrayList<>();
@@ -286,16 +269,9 @@ public class DataDictDownloader {
     }
     
     /**
-     * 构建数据字典详情URL
-     */
-    private String buildDetailUrl(String appCode, String classId) {
-        return config.getBaseUrl() + String.format(DETAIL_API_TEMPLATE, appCode, classId);
-    }
-    
-    /**
      * 使用正确编码下载内容
      */
-    private String downloadWithProperEncoding(String url) {
+    private String downloadWithProperEncoding(String url, VersionAdapter adapter) {
         try {
             // 设置请求头，模拟浏览器请求
             HttpHeaders headers = new HttpHeaders();
@@ -305,12 +281,14 @@ public class DataDictDownloader {
             headers.set("Origin", "https://www.oyonyou.com");
             headers.set("Referer", "https://www.oyonyou.com/");
             headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36");
-            headers.set("Sec-Ch-Ua", "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"");
-            headers.set("Sec-Ch-Ua-Mobile", "?0");
-            headers.set("Sec-Ch-Ua-Platform", "\"Windows\"");
-            headers.set("Sec-Fetch-Dest", "empty");
-            headers.set("Sec-Fetch-Mode", "cors");
-            headers.set("Sec-Fetch-Site", "same-site");
+
+            // 添加版本特定的请求头
+            if (adapter.needsSpecialHeaders()) {
+                Map<String, String> specialHeaders = adapter.getSpecialHeaders();
+                for (Map.Entry<String, String> entry : specialHeaders.entrySet()) {
+                    headers.set(entry.getKey(), entry.getValue());
+                }
+            }
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -319,14 +297,9 @@ public class DataDictDownloader {
             String content = response.getBody();
 
             if (content != null) {
-                logger.info("成功获取内容，长度: {}", content.length());
-                // 验证内容编码
-                if (isValidEncoding(content)) {
-                    return content;
-                } else {
-                    logger.warn("检测到可能的编码问题，但仍然返回内容");
-                    return content;
-                }
+                logger.info("成功获取内容，长度: {}, 内容类型: {}",
+                        content.length(), adapter.getContentType());
+                return content;
             }
 
             return null;
@@ -335,37 +308,6 @@ public class DataDictDownloader {
             logger.error("下载内容时出错: {}", url, e);
             return null;
         }
-    }
-
-    /**
-     * 检查编码是否有效（简单的启发式检查）
-     */
-    private boolean isValidEncoding(String content) {
-        if (content == null || content.isEmpty()) {
-            return false;
-        }
-
-        // 检查是否包含常见的乱码字符
-        String[] invalidPatterns = {"�", "锟斤拷", "烫烫烫"};
-        for (String pattern : invalidPatterns) {
-            if (content.contains(pattern)) {
-                return false;
-            }
-        }
-
-        // 检查是否包含预期的JavaScript变量名
-        if (content.contains("dataDictIndexData") || content.contains("fullClassname")) {
-            return true;
-        }
-
-        // 基本的中文字符范围检查
-        for (char c : content.toCharArray()) {
-            if (c >= 0x4E00 && c <= 0x9FFF) { // 中文字符范围
-                return true; // 包含中文字符，认为编码正确
-            }
-        }
-
-        return true; // 默认认为有效
     }
 
     /**
@@ -391,46 +333,17 @@ public class DataDictDownloader {
     }
 
     /**
-     * 解析数据字典详情JSON
+     * 获取当前版本信息
      */
-    private DataDictDetail parseDetailJson(String jsonContent, String classId) {
-        try {
-            JSONObject json = JSON.parseObject(jsonContent);
+    public YonyouVersion getCurrentVersion() {
+        String currentAppCode = config.getDefaultAppCode();
+        return adapterFactory.detectVersion(currentAppCode);
+    }
 
-            DataDictDetail detail = new DataDictDetail();
-            detail.setClassId(classId);
-            detail.setFullClassName(json.getString("fullClassname"));
-            detail.setDisplayName(json.getString("displayName"));
-            detail.setDefaultTableName(json.getString("defaultTableName"));
-            detail.setPrimary(json.getBooleanValue("isPrimary"));
-
-            JSONArray propertyArray = json.getJSONArray("propertyVO");
-            if (propertyArray != null) {
-                List<DataDictDetail.Property> properties = new ArrayList<>();
-                for (int i = 0; i < propertyArray.size(); i++) {
-                    JSONObject propObj = propertyArray.getJSONObject(i);
-
-                    DataDictDetail.Property property = new DataDictDetail.Property();
-                    property.setName(propObj.getString("name"));
-                    property.setDisplayName(propObj.getString("displayName"));
-                    property.setDataTypeSql(propObj.getString("dataTypeSql"));
-                    property.setKeyProp(propObj.getBooleanValue("keyProp"));
-                    property.setNullable(propObj.getBooleanValue("nullable"));
-                    property.setRefClassPathHref(propObj.getString("refClassPathHref"));
-
-                    // 解析新增字段
-                    property.setDefaultValue(propObj.getString("defaultValue"));
-                    property.setDataScope(propObj.getString("dataScope"));
-
-                    properties.add(property);
-                }
-                detail.setProperties(properties);
-            }
-
-            return detail;
-        } catch (Exception e) {
-            logger.error("解析数据字典详情JSON时出错", e);
-            return null;
-        }
+    /**
+     * 获取支持的所有版本
+     */
+    public Map<YonyouVersion, VersionAdapter> getSupportedVersions() {
+        return adapterFactory.getAllAdapters();
     }
 }

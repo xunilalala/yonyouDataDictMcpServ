@@ -51,6 +51,21 @@ public class DataDictDetail {
         // 新增字段：数据范围说明
         private String dataScope;
 
+        // 新增字段：字段编码
+        private String columnName;
+
+        // 新增字段：引用模型名称
+        private String refModelName;
+
+        // 新增字段：引用类ID
+        private String refClass;
+
+        // 新增字段：枚举值
+        private String enumValues;
+
+        // 新增字段：是否主键
+        private boolean primaryKey;
+
     }
 
 }
