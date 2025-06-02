@@ -20,12 +20,12 @@
 
 ### 当前支持的版本
 
-| 版本类型          | 应用代码示例            | 解析方式                    | 适配器                   | 状态    |
-|---------------|-------------------|-------------------------|-----------------------|-------|
-| **YonBIP高级版** | `yonbip3ddc`      | 解析JS中的dataDictIndexData | YonBipAdvancedAdapter | ✅ 已实现 |
-| **YonBIP旗舰版** | `yonbip-flagship` | 解析JS，但格式不同              | YonBipFlagshipAdapter | ✅ 已实现 |
-| **NC65**      | `ncddc0065`       | 解析HTML页面                | NC65Adapter           | ✅ 已实现 |
-| **NCCloud**   | `nccloud`         | 解析HTML页面                | NCCloudAdapter        | ✅ 已实现 |
+| 版本类型            | 应用代码示例            | 解析方式                    | 适配器                   | 状态    |
+|-----------------|-------------------|-------------------------|-----------------------|-------|
+| **YonBIP高级版系列** | `yonbip3ddc`      | 解析JS中的dataDictIndexData | YonBipAdvancedAdapter | ✅ 已实现 |
+| **YonBIP旗舰版系列** | `yonbip-flagship` | 解析JS，但格式不同              | YonBipFlagshipAdapter | ✅ 已实现 |
+| **NC65系列**      | `ncddc0065`       | 解析HTML页面                | NC65Adapter           | ✅ 已实现 |
+| **NCCloud系列**   | `nccloud`         | 解析HTML页面                | NCCloudAdapter        | ✅ 已实现 |
 
 ## 功能特性
 
@@ -76,14 +76,6 @@ docker-compose down
 ```bash
 java -jar yonyou-data-dict.jar # 这里放打包后的jar包
 ```
-
-### 验证启动
-
-启动成功后，可以通过以下方式验证：
-
-- **健康检查**：访问 `http://localhost:8080/actuator/health`
-- **架构状态**：访问 `http://localhost:8080/check/architecture/status`
-- **版本检测**：访问 `http://localhost:8080/check/architecture/detect?appCode=yonbip3ddc`
 
 ## 配置说明
 
