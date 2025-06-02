@@ -4,7 +4,6 @@ spring:
       server:
         name: YonYouDataDict    # MCP服务器名称
         version: 1.0.0                # 服务器版本号
-        type: SYNC #同步
   main:
     banner-mode: off
   servlet:
